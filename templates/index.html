@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DZ-Twinning Predisposition Score</title>
+<style>
+  :root{
+    --ink:#16233f; --ink-soft:#46557a; --paper:#fbfbfd; --line:#e3e6ef;
+    --teal:#0e8a7d; --teal-dim:#0e8a7d22; --amber:#b45309; --amber-bg:#fef6ec;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+       line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:760px;margin:0 auto;padding:40px 22px 80px}
+  header{border-bottom:2px solid var(--ink);padding-bottom:18px;margin-bottom:8px}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;
+           text-transform:uppercase;color:var(--teal);margin:0 0 8px}
+  h1{font-size:30px;line-height:1.15;margin:0;font-weight:680;letter-spacing:-.01em}
+  .sub{color:var(--ink-soft);margin:10px 0 0;font-size:15px}
+  /* twin-dot signature */
+  .twin{display:inline-flex;gap:7px;vertical-align:middle;margin-left:10px}
+  .twin span{width:13px;height:13px;border-radius:50%;border:2px solid var(--teal)}
+  .twin span.fill{background:var(--teal)}
+
+  .card{border:1px solid var(--line);border-radius:12px;padding:22px;margin-top:26px;
+        background:#fff}
+  .card h2{font-size:13px;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;
+           color:var(--ink-soft);margin:0 0 16px;font-weight:600}
+
+  .locus{display:grid;grid-template-columns:1fr auto;gap:10px 16px;align-items:center;
+         padding:14px 0;border-top:1px solid var(--line)}
+  .locus:first-of-type{border-top:none}
+  .gene{font-weight:660;font-size:16px}
+  .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft)}
+  .meta b{color:var(--teal);font-weight:700}
+  select{font-family:var(--mono);font-size:15px;padding:9px 12px;border:1px solid var(--line);
+          border-radius:8px;background:#fff;color:var(--ink);min-width:74px}
+  select:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+
+  .btn{appearance:none;border:none;background:var(--ink);color:#fff;font-family:var(--sans);
+       font-size:15px;font-weight:600;padding:13px 22px;border-radius:9px;cursor:pointer;margin-top:18px}
+  .btn:hover{background:#0c1830}
+  .btn:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+
+  /* result */
+  .scorebar{height:10px;border-radius:6px;background:linear-gradient(90deg,#dfe3ee,var(--teal));
+            position:relative;margin:14px 0 6px}
+  .scorebar i{position:absolute;top:-5px;width:4px;height:20px;background:var(--ink);
+              border-radius:2px;transform:translateX(-2px)}
+  .bignum{font-family:var(--mono);font-size:40px;font-weight:680;letter-spacing:-.02em}
+  .bignum small{font-size:15px;color:var(--ink-soft);font-weight:500}
+  .grid{width:100%;border-collapse:collapse;margin-top:8px;font-size:14px}
+  .grid th,.grid td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
+  .grid th{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+           color:var(--ink-soft);font-weight:600}
+  .grid td.num{font-family:var(--mono);text-align:right}
+
+  .disclaimer{background:var(--amber-bg);border:1px solid #f0d8b8;border-left:4px solid var(--amber);
+              border-radius:8px;padding:16px 18px;margin-top:26px}
+  .disclaimer h3{margin:0 0 6px;font-size:14px;color:var(--amber)}
+  .disclaimer p{margin:6px 0 0;font-size:13.5px;color:#5b4326}
+  .errs{background:#fdecec;border:1px solid #f3c2c2;border-radius:8px;padding:12px 16px;margin-top:18px}
+  .errs li{font-size:14px;color:#9b2222}
+  footer{margin-top:34px;font-size:12px;color:var(--ink-soft);font-family:var(--mono)}
+  a{color:var(--teal)}
+  @media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Polygenic predisposition · research tool</p>
+    <h1>Dizygotic-twinning score
+      <span class="twin" aria-hidden="true"><span class="fill"></span><span></span></span>
+    </h1>
+    <p class="sub">Enter how many copies of each twinning-increasing allele a person carries.
+      The score is a literature-weighted sum across four maternal DZ-twinning loci, placed against the
+      {{ data_source }} reference distribution.</p>
+  </header>
+
+  {% if errors %}
+  <ul class="errs">{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+  {% endif %}
+
+  <form method="post" action="/score">
+    <div class="card">
+      <h2>Genotypes — copies of the effect allele</h2>
+      {% for l in loci %}
+      <div class="locus">
+        <div>
+          <div class="gene">{{ l.gene }}</div>
+          <div class="meta">{{ l.rsid }} · effect allele <b>{{ l.effect_allele }}</b> · OR {{ '%.2f'|format(l.or) }}</div>
+        </div>
+        <select name="{{ l.rsid }}" aria-label="copies of {{ l.effect_allele }} for {{ l.gene }}">
+          {% set cur = submitted[l.rsid] if submitted else '0' %}
+          {% for v in ['0','1','2'] %}
+          <option value="{{ v }}" {{ 'selected' if cur==v else '' }}>{{ v }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endfor %}
+      <button class="btn" type="submit">Compute score</button>
+    </div>
+  </form>
+
+  {% if result %}
+  <div class="card">
+    <h2>Result</h2>
+    <div class="bignum">{{ '%.0f'|format(result.percentile) }}<small>th percentile</small></div>
+    <div class="scorebar"><i style="left: {{ '%.1f'|format(result.percentile) }}%"></i></div>
+    <p class="meta">PRS = {{ '%.4f'|format(result.prs) }} · z = {{ '%+.2f'|format(result.z) }}
+       (vs reference mean). Higher = more predisposing alleles than the reference average.</p>
+
+    <table class="grid">
+      <thead><tr><th>Gene</th><th>Variant</th><th>Effect allele</th><th>Copies</th><th>Weight (β)</th><th>Contribution</th></tr></thead>
+      <tbody>
+      {% for c in result.contributions %}
+        <tr>
+          <td>{{ c.gene }}</td>
+          <td class="meta">{{ c.rsid }}</td>
+          <td>{{ c.effect_allele }}</td>
+          <td class="num">{{ c.dosage }}</td>
+          <td class="num">{{ '%.3f'|format(c.beta) }}</td>
+          <td class="num">{{ '%.3f'|format(c.contribution) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <div class="disclaimer">
+    <h3>What this score is — and is not</h3>
+    <p><b>This is a research predisposition score, not a clinical or reproductive predictor.</b>
+       It cannot tell anyone whether they will have twins.</p>
+    <p>In the analysis behind this tool, these four European-discovered loci carried
+       <b>no twinning-specific signal beyond genome-wide ancestry</b> (incremental R² ≈ 0). A percentile here
+       reflects how many of these specific alleles a person carries relative to a reference panel — not a
+       twinning probability. Do not use it for medical, fertility, or family-planning decisions.</p>
+  </div>
+
+  <footer>Model: 4 maternal DZ-twinning loci (FSHB, SMAD3, GNRH1, ZFPM1) · weights from published GWAS ·
+    reference: {{ data_source }}.</footer>
+</div>
+</body>
+</html>
